@@ -9,5 +9,11 @@ export default defineConfig({
   },
   run: {
     cache: true,
+    tasks: {
+      "prototype:compression-contract": {
+        command: "node tools/compression-contract-prototype/src/tui.ts",
+        cache: false,
+      },
+    },
   },
 });
