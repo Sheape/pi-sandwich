@@ -1,6 +1,6 @@
 # Serena output model without Serena workflow policy
 
-**Status:** ADR-ready research note for [issue #15](https://github.com/Sheape/pi-sandwich/issues/15)  
+**Status:** ADR-ready research note for [Model Serena outputs without importing Serena workflow policy](https://github.com/Sheape/pi-sandwich/issues/15)  
 **Decision target:** Serena v1.6.1 (`bcac0969fb8685783ea6d0f2642468fcc47e6395`), MCP protocol 2025-11-25  
 **Recommendation:** Defer a dedicated Serena adapter from MVP. Use generic, lossless structured-result externalization; revisit a small parser-only adapter only after captured production results show material incremental savings.
 
