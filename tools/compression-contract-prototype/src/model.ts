@@ -170,21 +170,16 @@ const scenarios: readonly Scenario[] = [
   },
   {
     id: "lossless-success",
-    title: "Lossless round-trip success",
+    title: "Core-bundled lossless round-trip success",
     input: textInput("read", "Repeated source lines with reversible inline metadata", 48_000),
     recoveryResult: "lossless-verified",
     steps: [
-      transition("Static metadata produced one eligible reversible adapter.", {
+      transition("No specialized adapter was eligible; the generic candidate owner was selected.", {
         phase: "static-eligibility",
-        staticCandidates: ["exact-deduplicator@50"],
+        owner: "generic-core",
       }),
-      transition("The matcher accepted the same untouched input.", {
-        phase: "dynamic-matching",
-        matcherOutcomes: { "exact-deduplicator": "match@50" },
-      }),
-      transition("The adapter became the specialized candidate owner.", {
+      transition("MVP policy allowed one approved core-bundled codec with a bundled decoder.", {
         phase: "ownership",
-        owner: "exact-deduplicator",
       }),
       transition("The owner produced one candidate with inline restoration metadata.", {
         phase: "transform",
@@ -342,20 +337,12 @@ const scenarios: readonly Scenario[] = [
   },
   {
     id: "lossless-mismatch",
-    title: "Lossless restoration mismatch",
+    title: "Core-bundled lossless restoration mismatch",
     input: textInput("read", "Source where whitespace was accidentally removed", 32_000),
     steps: [
-      transition("One reversible adapter was statically eligible.", {
-        phase: "static-eligibility",
-        staticCandidates: ["whitespace-deduplicator@50"],
-      }),
-      transition("Its matcher accepted the untouched input.", {
-        phase: "dynamic-matching",
-        matcherOutcomes: { "whitespace-deduplicator": "match@50" },
-      }),
-      transition("It became the sole owner.", {
+      transition("The generic candidate owner selected an approved core-bundled codec.", {
         phase: "ownership",
-        owner: "whitespace-deduplicator",
+        owner: "generic-core",
       }),
       transition("It requested lossless classification.", {
         phase: "transform",

@@ -271,7 +271,7 @@ The complete model is too complex for an MVP if it simultaneously includes seman
 
 Removing any of these would weaken the central safety claim.
 
-### Recommended MVP deferrals
+### MVP deferrals
 
 - General specialized `verified-lossless` adapters until decoder lifetime is solved
 - Multi-codec composition; permit only a single codec per lossless candidate initially
@@ -282,6 +282,16 @@ Removing any of these would weaken the central safety claim.
 - Sophisticated profile-specific savings thresholds; begin with one conservative configurable threshold
 
 An external-first MVP—`verified-externally-recoverable`, raw fallback, and at most narrowly bundled reversible codecs—retains the safety claim while removing the hardest decoder-lifetime and composition obligations.
+
+### Chosen MVP fidelity boundary
+
+The MVP is external-first:
+
+- Semantic adapter compression uses `verified-externally-recoverable`.
+- Raw fail-open remains universal.
+- `verified-lossless` is permitted only for approved core-bundled codecs whose compatible decoder ships for the same supported core lifetime.
+- Specialized adapter lossless proposals remain disabled until [Guarantee decoder availability for retained lossless history](https://github.com/Sheape/pi-sandwich/issues/24) establishes a retained-history decoder guarantee.
+- The full fidelity type remains part of the architecture; this is an MVP enablement boundary, not removal of the lossless path.
 
 ## Newly exposed or sharpened unresolved decisions
 
@@ -294,4 +304,4 @@ An external-first MVP—`verified-externally-recoverable`, raw fallback, and at 
 
 ## Next unresolved question in this ticket
 
-Should the MVP permit specialized `verified-lossless` commits before decoder lifetime is solved, or should it be external-first and defer specialized lossless commits?
+What durability tier must the external-first MVP guarantee for committed and pinned evidence: process lifetime, process-crash survival, or machine-crash survival?

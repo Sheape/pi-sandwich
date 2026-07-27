@@ -37,7 +37,7 @@ flowchart TD
       L4 -- Yes --> L5
     end
 
-    F -- verified-lossless candidate --> L1
+    F -- verified-lossless candidate<br/>MVP: approved core-bundled codecs only --> L1
     L4 -- No --> FAIL[Discard candidate<br/>Abort PREPARED evidence if present<br/>Emit specific diagnostic<br/>Fail open]
     L5 -- No --> FAIL
 
@@ -110,3 +110,5 @@ receive Pi-visible tool result
 ```
 
 Any failed or indeterminate required stage returns the complete original Pi-visible result unchanged. Ambiguity and matcher failure reduce compression aggressiveness. Evidence proves recoverability, never truthfulness.
+
+The MVP is external-first: semantic adapters use verified external recovery; specialized lossless adapters remain disabled until retained-history decoder lifetime is guaranteed.
