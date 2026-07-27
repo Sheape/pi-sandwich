@@ -8,7 +8,7 @@ Does the compression pipeline state model agreed in [Set the immutable compressi
 
 This prototype models the decisions made so far. It deliberately does not choose a storage backend, implement real adapters, tune budgets, or integrate with Pi.
 
-See the [shared contract flowchart](./FLOWCHART.md) for the complete pipeline and recovery path.
+The corrected architecture lives in the [working decision record](./DECISION-RECORD.md) and [integrity and recoverability flowchart](./FLOWCHART.md). They supersede terminology and lifecycle details in earlier prototype commits.
 
 ## Run
 

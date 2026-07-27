@@ -1,6 +1,10 @@
 // THROWAWAY PROTOTYPE: model the proposed compression safety contract, not production behavior.
 
 export type AmbiguousMatchPolicy = "lossless-generic" | "raw";
+export type Fidelity =
+  | "verified-lossless"
+  | "verified-externally-recoverable"
+  | "irreversibly-lossy";
 export type Phase =
   | "received"
   | "static-eligibility"
@@ -19,8 +23,11 @@ export type HistoryState = "original-pending" | "compact-immutable" | "original-
 export interface InputEnvelope {
   readonly tool: string;
   readonly isError: boolean;
-  readonly byteLength: number;
-  readonly hash: string;
+  readonly payloadByteLength: number;
+  readonly envelopeByteLength: number;
+  readonly payloadHash: string;
+  readonly envelopeHash: string;
+  readonly canonicalizationVersion: "pi-tool-result-v1";
   readonly summary: string;
 }
 
@@ -35,14 +42,17 @@ export interface PipelineState {
   readonly staticCandidates: readonly string[];
   readonly matcherOutcomes: Readonly<Record<string, string>>;
   readonly owner: string | null;
-  readonly classification:
-    | "none"
-    | "lossless-candidate"
-    | "externally-recoverable-candidate"
-    | "irreversibly-lossy";
-  readonly evidence: "not-required" | "pending" | "verified" | "invalid";
+  readonly requestedFidelity: Fidelity | "none";
+  readonly evidence:
+    | "not-required"
+    | "staging"
+    | "prepared"
+    | "committed-pinned"
+    | "aborted"
+    | "invalid";
   readonly candidate: string | null;
-  readonly validation: string;
+  readonly recoverabilityValidation: string;
+  readonly presentationValidation: string;
   readonly history: HistoryState;
   readonly recovery: "not-requested" | "verified" | "evidence_integrity_error";
   readonly diagnostics: readonly string[];
@@ -64,7 +74,7 @@ interface Scenario {
   readonly id: string;
   readonly title: string;
   readonly input: InputEnvelope;
-  readonly recoveryResult?: "verified" | "evidence_integrity_error";
+  readonly recoveryResult?: "lossless-verified" | "external-verified" | "evidence_integrity_error";
   readonly steps: readonly Step[];
 }
 
@@ -97,8 +107,11 @@ const textInput = (
 ): InputEnvelope => ({
   tool,
   isError,
-  byteLength,
-  hash: `sha256:${tool}-${byteLength}`,
+  payloadByteLength: byteLength,
+  envelopeByteLength: byteLength + 128,
+  payloadHash: `sha256:payload-${tool}-${byteLength}`,
+  envelopeHash: `sha256:envelope-${tool}-${byteLength + 128}`,
+  canonicalizationVersion: "pi-tool-result-v1",
   summary,
 });
 
@@ -111,7 +124,7 @@ const uniqueOwnerSteps: readonly Step[] = [
     phase: "dynamic-matching",
     matcherOutcomes: { "vitest-output": "match@100" },
   }),
-  transition("The unique highest-priority adapter became the sole owner.", {
+  transition("The unique highest-priority adapter became the specialized candidate owner.", {
     phase: "ownership",
     owner: "vitest-output",
   }),
@@ -122,24 +135,34 @@ const scenarios: readonly Scenario[] = [
     id: "external-success",
     title: "Externally recoverable success",
     input: textInput("bash", "Vitest output: 1 failure among 2,400 tests", 2_400_000, true),
-    recoveryResult: "verified",
+    recoveryResult: "external-verified",
     steps: [
       ...uniqueOwnerSteps,
-      transition("Core stored exact source bytes and verified the versioned receipt.", {
-        phase: "evidence",
-        evidence: "verified",
-      }),
-      transition("The owner produced an explicitly external candidate.", {
+      transition(
+        "Core staged canonical envelope bytes, read them back, and verified both identities.",
+        {
+          phase: "evidence",
+          evidence: "prepared",
+          recoverabilityValidation: "staged bytes equal canonical envelope",
+        },
+      ),
+      transition("The owner used the provisional receipt to produce one external candidate.", {
         phase: "transform",
-        classification: "externally-recoverable-candidate",
+        requestedFidelity: "verified-externally-recoverable",
         candidate: "TEST RUN: FAILED; 1 failure; evidence://ev_0198",
       }),
-      transition("Core applied only reversible generic formatting.", { phase: "cleanup" }),
-      transition("Machine-checkable claims, status, and evidence reference all validated.", {
+      transition("Independent presentation checks recomputed every visible claim.", {
         phase: "validation",
-        validation: "external candidate valid",
+        presentationValidation: "typed facts and evidence reference verified",
       }),
-      transition("Pi receives one final replacement; history is now opaque and immutable.", {
+      transition(
+        "Core committed and pinned evidence, then bound its receipt into history metadata.",
+        {
+          phase: "evidence",
+          evidence: "committed-pinned",
+        },
+      ),
+      transition("Pi receives one replacement; history is now opaque and immutable.", {
         phase: "committed",
         history: "compact-immutable",
       }),
@@ -149,6 +172,7 @@ const scenarios: readonly Scenario[] = [
     id: "lossless-success",
     title: "Lossless round-trip success",
     input: textInput("read", "Repeated source lines with reversible inline metadata", 48_000),
+    recoveryResult: "lossless-verified",
     steps: [
       transition("Static metadata produced one eligible reversible adapter.", {
         phase: "static-eligibility",
@@ -158,21 +182,24 @@ const scenarios: readonly Scenario[] = [
         phase: "dynamic-matching",
         matcherOutcomes: { "exact-deduplicator": "match@50" },
       }),
-      transition("The adapter became the sole owner.", {
+      transition("The adapter became the specialized candidate owner.", {
         phase: "ownership",
         owner: "exact-deduplicator",
       }),
-      transition("The owner produced compact bytes and inline restoration metadata.", {
+      transition("The owner produced one candidate with inline restoration metadata.", {
         phase: "transform",
-        classification: "lossless-candidate",
+        requestedFidelity: "verified-lossless",
         candidate: "line × 4000 {positions: …}",
       }),
-      transition("Core cleanup preserved reversibility.", { phase: "cleanup" }),
-      transition("Isolated restoration matched the original bytes exactly.", {
+      transition("The terminable restorer reconstructed the canonical payload exactly.", {
         phase: "validation",
-        validation: "direct byte equality passed",
+        recoverabilityValidation: "direct byte equality passed",
       }),
-      transition("The verified lossless result entered immutable history.", {
+      transition("Independent checks verified the final model-visible presentation.", {
+        phase: "validation",
+        presentationValidation: "typed fields and excerpts verified",
+      }),
+      transition("Versioned codec metadata and a compatible decoder lifetime were recorded.", {
         phase: "committed",
         history: "compact-immutable",
       }),
@@ -208,9 +235,11 @@ const scenarios: readonly Scenario[] = [
             ? { phase: "failed-open", history: "original-fail-open" }
             : {
                 phase: "validation",
-                classification: "lossless-candidate",
-                candidate: "reversible generic representation",
-                validation: "generic round trip passed",
+                owner: "generic-core",
+                requestedFidelity: "verified-lossless",
+                candidate: "approved reversible generic representation",
+                recoverabilityValidation: "generic round trip passed",
+                presentationValidation: "generic presentation verified",
               },
         )(state),
       (state) =>
@@ -267,9 +296,11 @@ const scenarios: readonly Scenario[] = [
             ? { phase: "failed-open", history: "original-fail-open" }
             : {
                 phase: "committed",
-                classification: "lossless-candidate",
-                candidate: "reversible generic representation",
-                validation: "generic round trip passed",
+                owner: "generic-core",
+                requestedFidelity: "verified-lossless",
+                candidate: "approved reversible generic representation",
+                recoverabilityValidation: "generic round trip passed",
+                presentationValidation: "generic presentation verified",
                 history: "compact-immutable",
               },
         )(state),
@@ -283,7 +314,7 @@ const scenarios: readonly Scenario[] = [
       ...uniqueOwnerSteps,
       diagnosticTransition(
         "ADAPTER_TIMEOUT",
-        "The killable worker exceeded its deadline; no second lossy owner may run.",
+        "The terminable execution boundary exceeded its deadline; no second candidate owner may run.",
         { phase: "transform" },
       ),
       transition("The candidate was discarded and the failed original stayed failed.", {
@@ -300,7 +331,7 @@ const scenarios: readonly Scenario[] = [
       ...uniqueOwnerSteps,
       diagnosticTransition(
         "EVIDENCE_INTEGRITY_FAILURE",
-        "Receipt length or SHA-256 differed from the locally computed values.",
+        "Read-back staged bytes differed from the locally computed canonical identity.",
         { phase: "evidence", evidence: "invalid" },
       ),
       transition("No transform ran; the exact original failed open.", {
@@ -328,13 +359,17 @@ const scenarios: readonly Scenario[] = [
       }),
       transition("It requested lossless classification.", {
         phase: "transform",
-        classification: "lossless-candidate",
+        requestedFidelity: "verified-lossless",
         candidate: "compact source + restoration metadata",
       }),
       diagnosticTransition(
         "LOSSLESS_VERIFICATION_FAILURE",
-        "Restored bytes differed; evidence cannot legitimize this candidate.",
-        { phase: "validation", validation: "direct byte equality failed", candidate: null },
+        "Restored canonical payload differed; evidence cannot legitimize this candidate.",
+        {
+          phase: "validation",
+          recoverabilityValidation: "direct byte equality failed",
+          candidate: null,
+        },
       ),
       transition("The invalid candidate was discarded completely.", {
         phase: "failed-open",
@@ -348,22 +383,28 @@ const scenarios: readonly Scenario[] = [
     input: textInput("bash", "Test output containing one failure", 300_000, true),
     steps: [
       ...uniqueOwnerSteps,
-      transition("Core stored exact evidence and verified its receipt.", {
+      transition("Core staged, read back, and verified the canonical envelope bytes.", {
         phase: "evidence",
-        evidence: "verified",
+        evidence: "prepared",
+        recoverabilityValidation: "staged bytes verified",
       }),
       transition("The adapter proposed a recoverable but false summary: all tests passed.", {
         phase: "transform",
-        classification: "externally-recoverable-candidate",
+        requestedFidelity: "verified-externally-recoverable",
         candidate: "ALL TESTS PASSED; evidence://ev_false",
       }),
       diagnosticTransition(
-        "EXTERNAL_CANDIDATE_VALIDATION_FAILURE",
-        "Machine-checkable validation found a claim contradicting the original.",
-        { phase: "validation", validation: "contradiction detected", candidate: null },
+        "CANDIDATE_PRESENTATION_FAILURE",
+        "Independent validation found a model-visible claim contradicting the original.",
+        {
+          phase: "validation",
+          presentationValidation: "contradiction detected",
+          candidate: null,
+        },
       ),
-      transition("Valid evidence did not rescue the misleading candidate.", {
+      transition("Prepared evidence was aborted; valid evidence never rescues false context.", {
         phase: "failed-open",
+        evidence: "aborted",
         history: "original-fail-open",
       }),
     ],
@@ -374,18 +415,23 @@ const scenarios: readonly Scenario[] = [
     input: textInput("bash", "Compiler exited 1 with 100 MB diagnostics", 100_000_000, true),
     steps: [
       ...uniqueOwnerSteps,
-      transition("Core stored and verified the complete failed-result envelope.", {
+      transition("Core staged and read-back verified the complete failed-result envelope.", {
         phase: "evidence",
-        evidence: "verified",
+        evidence: "prepared",
+        recoverabilityValidation: "staged bytes verified",
       }),
-      transition("The adapter preserved isError, exit status, identity, excerpt, and reference.", {
+      transition("The adapter preserved failure status, exit status, excerpt, and reference.", {
         phase: "transform",
-        classification: "externally-recoverable-candidate",
+        requestedFidelity: "verified-externally-recoverable",
         candidate: "FAILED exit=1; diagnostic excerpt; evidence://ev_failure",
       }),
-      transition("All machine-checkable failure claims matched the original.", {
+      transition("Independent checks recomputed all visible failure claims.", {
         phase: "validation",
-        validation: "failure semantics preserved",
+        presentationValidation: "failure semantics verified",
+      }),
+      transition("Core committed and pinned evidence and bound the receipt into history.", {
+        phase: "evidence",
+        evidence: "committed-pinned",
       }),
       transition("The compact result entered immutable history and still reads as failed.", {
         phase: "committed",
@@ -401,7 +447,7 @@ const scenarios: readonly Scenario[] = [
       transition("No specialized adapter was statically eligible.", {
         phase: "static-eligibility",
       }),
-      transition("The generic core reducer would require external evidence.", {
+      transition("The generic candidate owner would require external evidence.", {
         phase: "ownership",
         owner: "generic-core",
       }),
@@ -423,18 +469,23 @@ const scenarios: readonly Scenario[] = [
     recoveryResult: "evidence_integrity_error",
     steps: [
       ...uniqueOwnerSteps,
-      transition("Core stored exact bytes and verified the receipt before transformation.", {
+      transition("Core staged and read-back verified the canonical envelope bytes.", {
         phase: "evidence",
-        evidence: "verified",
+        evidence: "prepared",
+        recoverabilityValidation: "staged bytes verified",
       }),
-      transition("A machine-checkable external candidate preserved failure semantics.", {
+      transition("The owner produced an external candidate preserving failure semantics.", {
         phase: "transform",
-        classification: "externally-recoverable-candidate",
+        requestedFidelity: "verified-externally-recoverable",
         candidate: "FAILED exit=1; evidence://ev_later_corrupt",
       }),
-      transition("The final candidate and receipt both validated.", {
+      transition("Independent checks verified the final model-visible presentation.", {
         phase: "validation",
-        validation: "external candidate valid",
+        presentationValidation: "external candidate verified",
+      }),
+      transition("Core committed and pinned evidence and bound the receipt into history.", {
+        phase: "evidence",
+        evidence: "committed-pinned",
       }),
       transition("The compact result entered immutable history.", {
         phase: "committed",
@@ -460,14 +511,15 @@ function initialForScenario(
     staticCandidates: [],
     matcherOutcomes: {},
     owner: null,
-    classification: "none",
+    requestedFidelity: "none",
     evidence: "not-required",
     candidate: null,
-    validation: "not run",
+    recoverabilityValidation: "not run",
+    presentationValidation: "not run",
     history: "original-pending",
     recovery: "not-requested",
     diagnostics: [],
-    lastTransition: "Received one immutable canonical input envelope.",
+    lastTransition: "Received and froze one versioned canonical Pi-visible tool_result envelope.",
     ambiguousPolicy: previous?.ambiguousPolicy ?? "lossless-generic",
     sessionFailureCounts: previous?.sessionFailureCounts ?? {},
     disabledAdapters: previous?.disabledAdapters ?? [],
@@ -511,13 +563,25 @@ export function reduce(state: PipelineState, action: Action): PipelineState {
       }
       const result = scenarios[state.scenarioIndex].recoveryResult;
       if (!result) {
-        return { ...state, lastTransition: "This compact result has no external evidence." };
+        return {
+          ...state,
+          lastTransition: "This result has no configured fidelity-specific recovery path.",
+        };
       }
-      if (result === "verified") {
+      if (result === "lossless-verified") {
         return {
           ...state,
           recovery: "verified",
-          lastTransition: "Retrieved bytes matched the stored SHA-256 and length.",
+          lastTransition:
+            "Pinned decoder versions restored bytes matching the committed payload identity.",
+        };
+      }
+      if (result === "external-verified") {
+        return {
+          ...state,
+          recovery: "verified",
+          lastTransition:
+            "Retrieved evidence matched the receipt bound into immutable history metadata.",
         };
       }
       return {
