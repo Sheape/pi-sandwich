@@ -1,6 +1,6 @@
 # Portable evidence-store backend decision record
 
-**Status:** Provisional pending human review. Protocol version 2 passed on x86-64 glibc Void Linux and Apple Silicon macOS.
+**Status:** Accepted. Protocol version 2 passed on x86-64 glibc Void Linux and Apple Silicon macOS.
 
 ## Question
 
@@ -75,7 +75,7 @@ The file layout accepts slower bulk operations to keep the recovery authority tr
 - [SQLite WAL](https://sqlite.org/wal.html): readers and writers can overlap, but there remains one writer and WAL introduces checkpoint/recovery state.
 - [Node.js zlib](https://nodejs.org/api/zlib.html): gzip/gunzip are bundled standard-format codecs.
 
-## Remaining evidence
+## Accepted evidence
 
 Both required target reports show:
 
@@ -85,4 +85,4 @@ Both required target reports show:
 - abandoned staging is removable;
 - `node:sqlite` is available without becoming a safety prerequisite.
 
-Only human acceptance of the recommended decision remains.
+The recommended decision is accepted.
