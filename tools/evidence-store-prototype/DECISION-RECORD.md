@@ -1,6 +1,6 @@
 # Portable evidence-store backend decision record
 
-**Status:** Provisional pending runs on musl Void Linux and Apple Silicon macOS, plus human review.
+**Status:** Provisional pending human review. Protocol version 2 passed on x86-64 glibc Void Linux and Apple Silicon macOS.
 
 ## Question
 
@@ -38,33 +38,33 @@ This decision claims process-crash and restart recovery only. It does **not** cl
 
 ## Probe result
 
-The committed [Linux result](results/linux-x64-glibc-2.41-node24.json) is protocol version 2 on x86-64 glibc Void Linux, Node 24.18.0, and SQLite 3.53.1. It is not evidence for either required target class.
+The protocol-version-2 [glibc Void Linux result](results/linux-x64-glibc-2.41-node24.json) and [Apple Silicon macOS result](results/darwin-arm64-none-node24.json) both used Node 24.18.0 and SQLite 3.53.1.
 
-| 200 × 16 KiB records    | Record directories |        + JSONL accelerator |  SQLite BLOBs |
-| ----------------------- | -----------------: | -------------------------: | ------------: |
-| Write                   |             308 ms |                     793 ms |         46 ms |
-| Read and hash all       |              96 ms |                     248 ms |         22 ms |
-| Receipt ID lookup       |            0.55 ms |                    0.42 ms |       0.10 ms |
-| Tail 10                 |              30 ms |                    0.69 ms |       1.85 ms |
-| Concurrent writers      |     101/101 unique |        100/100 valid lines |  100/100 rows |
-| Corruption blast radius |         One record | Rebuild index from records | Database-wide |
+| 200 × 16 KiB records | Linux records | Linux + JSONL | Linux SQLite | macOS records | macOS + JSONL | macOS SQLite |
+| -------------------- | ------------: | ------------: | -----------: | ------------: | ------------: | -----------: |
+| Write                |        370 ms |        289 ms |        52 ms |         80 ms |         86 ms |        17 ms |
+| Read and hash all    |         93 ms |        105 ms |        28 ms |         21 ms |         19 ms |       1.7 ms |
+| Receipt ID lookup    |       0.44 ms |       0.21 ms |      0.12 ms |       0.10 ms |       0.03 ms |      0.01 ms |
+| Tail 10              |         38 ms |       0.26 ms |      2.17 ms |       5.72 ms |       0.06 ms |      0.38 ms |
 
-For an 8 MiB repetitive result, gzip stored 28,565 bytes and added about 59 ms to the raw file write. For an 8 MiB incompressible result, gzip stored 8,391,191 bytes and took 612 ms versus 119 ms raw. SQLite stored either raw 8 MiB BLOB in about 8.4 MiB and wrote it in 38–43 ms on this host.
+Both targets recovered one committed record after process restart, identified and removed one abandoned staging record, converged concurrent same-hash file writers at 101/101 unique records, produced 100/100 valid concurrent JSONL lines and SQLite rows, detected record corruption without harming a sibling, and detected database corruption.
+
+On both targets gzip stored the 8 MiB repetitive fixture in 28,565 bytes but expanded the incompressible fixture to 8,391,191 bytes. This confirms that compression remains profile-dependent rather than part of the backend safety floor.
 
 The file layout accepts slower bulk operations to keep the recovery authority transparent, dependency-free, and record-local. SQLite's speed justifies a later rebuildable index, not putting all exact evidence behind one mutable database file before retention and query volume are known.
 
 ## Acceptance comparison
 
-| Concern           | Record directories                             | JSONL authority                              | SQLite BLOB authority                                      |
-| ----------------- | ---------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------- |
-| Portability       | Node filesystem APIs only; target runs pending | Same, but append behavior needs target proof | Built into tested Node; target package/build proof pending |
-| Atomic visibility | One same-filesystem directory rename           | Blob and log cannot commit together          | One database transaction                                   |
-| Concurrency       | Independent hashes do not share a mutable file | Shared append log                            | One writer at a time; busy timeout required                |
-| Recovery          | Verify records; delete staging                 | Parse/repair log and reconcile blobs         | SQLite journal/WAL recovery and integrity check            |
-| Compression       | Orthogonal per-record encoding                 | Orthogonal                                   | Possible before BLOB insertion                             |
-| Search/tail       | O(1) by receipt ID; otherwise O(n)             | O(n) unless loaded/indexed                   | Indexed queries                                            |
-| Corruption        | Record-local                                   | Log may be rebuilt from records              | Shared database failure domain                             |
-| Maintenance       | Filesystem scan and ordinary tools             | Custom parser/rebuilder                      | SQL schema, checkpoints, integrity/recovery tooling        |
+| Concern           | Record directories                             | JSONL authority                                    | SQLite BLOB authority                                |
+| ----------------- | ---------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| Portability       | Protocol v2 passed both target classes         | Concurrent probe passed; remains non-authoritative | Available on both targets; not a safety prerequisite |
+| Atomic visibility | One same-filesystem directory rename           | Blob and log cannot commit together                | One database transaction                             |
+| Concurrency       | Independent hashes do not share a mutable file | Shared append log                                  | One writer at a time; busy timeout required          |
+| Recovery          | Verify records; delete staging                 | Parse/repair log and reconcile blobs               | SQLite journal/WAL recovery and integrity check      |
+| Compression       | Orthogonal per-record encoding                 | Orthogonal                                         | Possible before BLOB insertion                       |
+| Search/tail       | O(1) by receipt ID; otherwise O(n)             | O(n) unless loaded/indexed                         | Indexed queries                                      |
+| Corruption        | Record-local                                   | Log may be rebuilt from records                    | Shared database failure domain                       |
+| Maintenance       | Filesystem scan and ordinary tools             | Custom parser/rebuilder                            | SQL schema, checkpoints, integrity/recovery tooling  |
 
 ## Primary sources
 
@@ -77,10 +77,12 @@ The file layout accepts slower bulk operations to keep the recovery authority tr
 
 ## Remaining evidence
 
-Run `vp run prototype:evidence-store` on musl Void Linux and Apple Silicon macOS. Accept the backend only if both reports show:
+Both required target reports show:
 
 - the same-directory record rename never exposes a partial committed directory under controlled process exits;
 - concurrent same-hash writers converge without corrupting the winner;
 - committed bytes and receipt verify after process restart;
 - abandoned staging is removable;
-- `node:sqlite` availability is recorded without becoming a safety prerequisite.
+- `node:sqlite` is available without becoming a safety prerequisite.
+
+Only human acceptance of the recommended decision remains.

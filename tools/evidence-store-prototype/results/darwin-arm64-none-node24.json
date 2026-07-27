@@ -12,39 +12,39 @@
     "Measurements characterize only the reported Node build, libc, OS, architecture, and filesystem."
   ],
   "environment": {
-    "platform": "linux",
-    "architecture": "x64",
+    "platform": "darwin",
+    "architecture": "arm64",
     "node": "v24.18.0",
     "sqlite": "3.53.1",
-    "libc": "glibc-2.41"
+    "libc": "none"
   },
   "measurements": {
     "files": {
       "records": 200,
-      "writeMs": 369.673589,
-      "readMs": 93.432249,
-      "idLookupMs": 0.436976,
-      "tailMs": 38.439055,
+      "writeMs": 79.780667,
+      "readMs": 21.162667,
+      "idLookupMs": 0.098375,
+      "tailMs": 5.715667,
       "found": true,
       "tailCount": 10,
       "diskBytes": 3321290
     },
     "indexedFiles": {
       "records": 200,
-      "writeMs": 289.449354,
-      "readMs": 105.236285,
-      "idLookupMs": 0.205901,
-      "tailMs": 0.264379,
+      "writeMs": 85.593958,
+      "readMs": 18.796875,
+      "idLookupMs": 0.032875,
+      "tailMs": 0.057875,
       "found": true,
       "tailCount": 10,
       "diskBytes": 3338780
     },
     "gzipFiles": {
       "records": 200,
-      "writeMs": 517.147173,
-      "readMs": 131.332307,
-      "idLookupMs": 0.23516,
-      "tailMs": 25.371057,
+      "writeMs": 85.382625,
+      "readMs": 20.562084,
+      "idLookupMs": 0.035208,
+      "tailMs": 5.484667,
       "found": true,
       "tailCount": 10,
       "diskBytes": 75166
@@ -52,10 +52,10 @@
     "sqlite": {
       "available": true,
       "records": 200,
-      "writeMs": 51.658565,
-      "readMs": 28.016498,
-      "idLookupMs": 0.122228,
-      "tailMs": 2.172047,
+      "writeMs": 16.580667,
+      "readMs": 1.700292,
+      "idLookupMs": 0.01175,
+      "tailMs": 0.376584,
       "found": true,
       "tailCount": 10,
       "diskBytes": 3407872
@@ -65,17 +65,17 @@
         "originalBytes": 8388608,
         "raw": {
           "storedBytes": 8388608,
-          "writeMs": 98.66211
+          "writeMs": 9.269042
         },
         "gzip": {
           "storedBytes": 28565,
-          "writeMs": 148.647569,
+          "writeMs": 18.245417,
           "ratio": 0.0034052133560180664
         },
         "sqlite": {
           "available": true,
-          "writeMs": 36.917624,
-          "readMs": 55.202345,
+          "writeMs": 17.301583,
+          "readMs": 4.078209,
           "diskBytes": 8409088
         }
       },
@@ -83,17 +83,17 @@
         "originalBytes": 8388608,
         "raw": {
           "storedBytes": 8388608,
-          "writeMs": 94.576378
+          "writeMs": 9.141
         },
         "gzip": {
           "storedBytes": 8391191,
-          "writeMs": 578.036652,
+          "writeMs": 108.526834,
           "ratio": 1.0003079175949097
         },
         "sqlite": {
           "available": true,
-          "writeMs": 37.532365,
-          "readMs": 56.450156,
+          "writeMs": 16.760834,
+          "readMs": 3.984417,
           "diskBytes": 8409088
         }
       }
@@ -102,7 +102,7 @@
   "recovery": {
     "stagedBeforeCleanup": 1,
     "committedAfterRestart": 1,
-    "cleanupMs": 2.634053,
+    "cleanupMs": 0.800166,
     "action": "remove abandoned staging; retain verified committed records"
   },
   "concurrency": {

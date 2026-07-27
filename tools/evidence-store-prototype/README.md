@@ -4,7 +4,7 @@
 
 ## Question
 
-Which dependency-free backend best satisfies Sandwich's already-chosen evidence contract: exact canonical bytes, stable hashes, staged verification, one atomic commit-and-pin point, process-crash recovery, concurrent Pi processes, bounded cost, and portability across musl Void Linux and Apple Silicon macOS?
+Which dependency-free backend best satisfies Sandwich's already-chosen evidence contract: exact canonical bytes, stable hashes, staged verification, one atomic commit-and-pin point, process-crash recovery, concurrent Pi processes, bounded cost, and portability across x86-64 glibc Void Linux and Apple Silicon macOS?
 
 This is an empirical persistence probe rather than a state-machine TUI: the unresolved behavior belongs to filesystems and SQLite, so repeatable failpoints and measurements answer the question better than keyboard-driven state transitions.
 
