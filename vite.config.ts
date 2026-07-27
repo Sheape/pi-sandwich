@@ -9,5 +9,11 @@ export default defineConfig({
   },
   run: {
     cache: true,
+    tasks: {
+      "prototype:evidence-store": {
+        command: "node tools/evidence-store-prototype/probe.ts",
+        cache: false,
+      },
+    },
   },
 });

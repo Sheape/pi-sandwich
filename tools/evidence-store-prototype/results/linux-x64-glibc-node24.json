@@ -1,0 +1,139 @@
+{
+  "question": "Which dependency-free evidence backend should Sandwich use for its process-crash durability tier?",
+  "limitations": [
+    "No machine-crash or power-loss durability claim.",
+    "Measurements characterize only the reported Node build, libc, OS, architecture, and filesystem."
+  ],
+  "environment": {
+    "platform": "linux",
+    "architecture": "x64",
+    "node": "v24.18.0",
+    "sqlite": "3.53.1",
+    "libc": "glibc"
+  },
+  "measurements": {
+    "files": {
+      "records": 200,
+      "writeMs": 473.41689,
+      "readMs": 195.500409,
+      "idLookupMs": 0.892823,
+      "tailMs": 53.049255,
+      "found": true,
+      "tailCount": 10,
+      "diskBytes": 3321290
+    },
+    "indexedFiles": {
+      "records": 200,
+      "writeMs": 1098.722518,
+      "readMs": 190.781312,
+      "idLookupMs": 0.551362,
+      "tailMs": 0.525245,
+      "found": true,
+      "tailCount": 10,
+      "diskBytes": 3338780
+    },
+    "gzipFiles": {
+      "records": 200,
+      "writeMs": 781.880045,
+      "readMs": 139.43424,
+      "idLookupMs": 0.201181,
+      "tailMs": 37.411826,
+      "found": true,
+      "tailCount": 10,
+      "diskBytes": 75166
+    },
+    "sqlite": {
+      "available": true,
+      "records": 200,
+      "writeMs": 48.135221,
+      "readMs": 21.638059,
+      "idLookupMs": 0.109287,
+      "tailMs": 2.051627,
+      "found": true,
+      "tailCount": 10,
+      "diskBytes": 3407872
+    },
+    "largeBlob": {
+      "repetitiveToolOutput": {
+        "originalBytes": 8388608,
+        "raw": {
+          "storedBytes": 8388608,
+          "writeMs": 129.822953
+        },
+        "gzip": {
+          "storedBytes": 28565,
+          "writeMs": 172.924857,
+          "ratio": 0.0034052133560180664
+        },
+        "sqlite": {
+          "available": true,
+          "writeMs": 47.508903,
+          "readMs": 100.605624,
+          "diskBytes": 8409088
+        }
+      },
+      "incompressible": {
+        "originalBytes": 8388608,
+        "raw": {
+          "storedBytes": 8388608,
+          "writeMs": 148.066227
+        },
+        "gzip": {
+          "storedBytes": 8391191,
+          "writeMs": 938.104854,
+          "ratio": 1.0003079175949097
+        },
+        "sqlite": {
+          "available": true,
+          "writeMs": 69.895993,
+          "readMs": 66.28624,
+          "diskBytes": 8409088
+        }
+      }
+    }
+  },
+  "recovery": {
+    "stagedBeforeCleanup": 1,
+    "committedAfterRestart": 1,
+    "cleanupMs": 6.261127,
+    "action": "remove abandoned staging; retain verified committed records"
+  },
+  "concurrency": {
+    "files": {
+      "expectedUnique": 101,
+      "actual": 101
+    },
+    "indexed": {
+      "expected": 100,
+      "actualRecords": 100,
+      "validLines": 100
+    },
+    "sqlite": {
+      "expected": 100,
+      "actual": {
+        "count": 100
+      }
+    }
+  },
+  "corruption": {
+    "files": {
+      "isolatedFileCorruptionDetected": true,
+      "siblingStillReadable": true
+    },
+    "jsonl": {
+      "totalLines": 2,
+      "validIndexLines": 1,
+      "rebuildSource": "record directories"
+    },
+    "sqlite": {
+      "corruptionDetected": true,
+      "impact": "database-wide until restored or salvaged"
+    }
+  },
+  "provisionalRecommendation": {
+    "backend": "content-addressed record directories with per-record receipt metadata",
+    "index": "none authoritative; add a rebuildable accelerator only when measured lookup volume requires it",
+    "encoding": "raw canonical bytes by default; compression remains an independent profile decision",
+    "reason": "one rename commits bytes and receipt together, corruption is record-local, recovery is a directory scan, and no database/API availability becomes part of the safety floor"
+  }
+}
