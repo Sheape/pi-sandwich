@@ -20,7 +20,7 @@ Use content-addressed record directories as the authoritative evidence store:
     receipt.json
 ```
 
-Core writes and flushes both staged files, reads and verifies the canonical bytes, marks the immutable receipt pinned, then renames the whole non-empty directory into `records/` on the same filesystem. That rename is the only commit-and-pin visibility point.
+Core writes and closes both staged files, reads and verifies the canonical bytes, marks the immutable receipt pinned, then renames the whole non-empty directory into `records/` on the same filesystem. That rename is the only commit-and-pin visibility point. The process-crash tier deliberately omits `fsync`; flushing nonvolatile storage belongs to the unclaimed machine-crash tier.
 
 - A process exit before rename leaves an unreferenced staging directory that startup reconciliation removes.
 - A process exit after rename leaves a complete committed record that startup reconciliation verifies and retains.
@@ -38,18 +38,18 @@ This decision claims process-crash and restart recovery only. It does **not** cl
 
 ## Probe result
 
-The committed [Linux result](results/linux-x64-glibc-node24.json) is from x86-64 glibc Void Linux, Node 24.18.0, and SQLite 3.53.1. It is not evidence for either required target class.
+The committed [Linux result](results/linux-x64-glibc-2.41-node24.json) is protocol version 2 on x86-64 glibc Void Linux, Node 24.18.0, and SQLite 3.53.1. It is not evidence for either required target class.
 
 | 200 × 16 KiB records    | Record directories |        + JSONL accelerator |  SQLite BLOBs |
 | ----------------------- | -----------------: | -------------------------: | ------------: |
-| Write                   |             473 ms |                   1,099 ms |         48 ms |
-| Read and hash all       |             196 ms |                     191 ms |         22 ms |
-| Receipt ID lookup       |            0.89 ms |                    0.55 ms |       0.11 ms |
-| Tail 10                 |              53 ms |                    0.53 ms |       2.05 ms |
+| Write                   |             308 ms |                     793 ms |         46 ms |
+| Read and hash all       |              96 ms |                     248 ms |         22 ms |
+| Receipt ID lookup       |            0.55 ms |                    0.42 ms |       0.10 ms |
+| Tail 10                 |              30 ms |                    0.69 ms |       1.85 ms |
 | Concurrent writers      |     101/101 unique |        100/100 valid lines |  100/100 rows |
 | Corruption blast radius |         One record | Rebuild index from records | Database-wide |
 
-For an 8 MiB repetitive result, gzip stored 28,565 bytes and added about 43 ms to the raw file write. For an 8 MiB incompressible result, gzip stored 8,391,191 bytes and took 938 ms versus 148 ms raw. SQLite stored either raw 8 MiB BLOB in about 8.4 MiB and wrote it in 48–70 ms on this host.
+For an 8 MiB repetitive result, gzip stored 28,565 bytes and added about 59 ms to the raw file write. For an 8 MiB incompressible result, gzip stored 8,391,191 bytes and took 612 ms versus 119 ms raw. SQLite stored either raw 8 MiB BLOB in about 8.4 MiB and wrote it in 38–43 ms on this host.
 
 The file layout accepts slower bulk operations to keep the recovery authority transparent, dependency-free, and record-local. SQLite's speed justifies a later rebuildable index, not putting all exact evidence behind one mutable database file before retention and query volume are known.
 
@@ -68,7 +68,7 @@ The file layout accepts slower bulk operations to keep the recovery authority tr
 
 ## Primary sources
 
-- [Node.js 22 filesystem API](https://nodejs.org/download/release/v22.10.0/docs/api/fs.html): filesystem promises model POSIX operations; `flush: true` flushes a file descriptor before close, and `FileHandle.sync()` is exposed.
+- [Node.js 22 filesystem API](https://nodejs.org/download/release/v22.10.0/docs/api/fs.html): filesystem promises model POSIX operations and expose the write, close, read, and rename primitives used by the process-crash protocol.
 - [POSIX `rename()`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/rename.html): replacement remains visible as either old or new and the operation is specified as atomic; cross-filesystem rename may fail with `EXDEV`.
 - [Node.js 22 `node:sqlite`](https://nodejs.org/download/release/v22.13.1/docs/api/sqlite.html): added in Node 22.5.0; `DatabaseSync` is file-backed or in-memory and all its APIs are synchronous.
 - [SQLite atomic commit](https://sqlite.org/atomiccommit.html): transactions use journaling, locking, flushing, and recovery to present all-or-nothing changes.

@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync, gunzipSync } from "node:zlib";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 const script = fileURLToPath(import.meta.url);
 const encoder = new TextEncoder();
@@ -30,15 +30,6 @@ function payload(index: number, bytes = 16_384) {
   return Buffer.from(line.repeat(Math.ceil(bytes / line.length)).slice(0, bytes));
 }
 
-async function syncDirectory(path: string) {
-  const handle = await open(path, "r");
-  try {
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
-}
-
 async function stageRecord(root: string, bytes: Buffer, compressed = false, created = Date.now()) {
   const id = hash(bytes);
   const stagingRoot = join(root, "staging");
@@ -47,15 +38,12 @@ async function stageRecord(root: string, bytes: Buffer, compressed = false, crea
   await mkdir(dirname(target), { recursive: true });
   const staged = await mkdtemp(join(stagingRoot, "record-"));
   const stored = compressed ? gzipSync(bytes) : bytes;
-  await writeFile(join(staged, compressed ? "evidence.gz" : "evidence.bin"), stored, {
-    flush: true,
-  });
+  await writeFile(join(staged, compressed ? "evidence.gz" : "evidence.bin"), stored);
   await writeFile(
     join(staged, "receipt.json"),
     `${JSON.stringify({ schema: 1, id, hash: id, bytes: bytes.length, encoding: compressed ? "gzip" : "identity", pinned: true, created })}\n`,
-    { flush: true },
   );
-  await syncDirectory(staged);
+  await verifyRecord(staged);
   return { id, staged, target, storedBytes: stored.length };
 }
 
@@ -63,7 +51,6 @@ async function commitRecord(root: string, bytes: Buffer, compressed = false, cre
   const record = await stageRecord(root, bytes, compressed, created);
   try {
     await rename(record.staged, record.target);
-    await syncDirectory(dirname(record.target));
   } catch (error) {
     if (
       (error as NodeJS.ErrnoException).code !== "EEXIST" &&
@@ -72,8 +59,8 @@ async function commitRecord(root: string, bytes: Buffer, compressed = false, cre
       throw error;
     }
     await rm(record.staged, { recursive: true, force: true });
+    await verifyRecord(record.target);
   }
-  await verifyRecord(record.target);
   return record;
 }
 
@@ -120,9 +107,6 @@ async function measureFiles(root: string, compressed = false, indexed = false) {
       await appendFile(
         join(root, "index.jsonl"),
         `${JSON.stringify({ id: record.id, created: index })}\n`,
-        {
-          flush: true,
-        },
       );
     }
   }
@@ -268,9 +252,7 @@ async function worker(kind: string, root: string, workerId = "0") {
   if (kind === "indexed") {
     for (let index = 0; index < 25; index++) {
       const record = await commitRecord(root, payload(Number(workerId) * 1000 + index));
-      await appendFile(join(root, "index.jsonl"), `${JSON.stringify({ id: record.id })}\n`, {
-        flush: true,
-      });
+      await appendFile(join(root, "index.jsonl"), `${JSON.stringify({ id: record.id })}\n`);
     }
     return;
   }
@@ -473,6 +455,18 @@ async function largeBlobProbe(root: string) {
   };
 }
 
+function libc(runtimeReport: { header?: { glibcVersionRuntime?: string } } | undefined) {
+  if (process.platform !== "linux") return "none";
+  if (runtimeReport?.header?.glibcVersionRuntime)
+    return `glibc-${runtimeReport.header.glibcVersionRuntime}`;
+  const ldd = spawnSync("ldd", ["--version"], { encoding: "utf8" });
+  return /musl/i.test(`${ldd.stdout}${ldd.stderr}`) ? "musl" : "unknown";
+}
+
+function filenamePart(value: string) {
+  return value.replaceAll(/[^a-z0-9.-]+/gi, "-");
+}
+
 async function main() {
   if (process.argv[2] === "--worker") {
     await worker(process.argv[3], process.argv[4], process.argv[5]);
@@ -488,6 +482,13 @@ async function main() {
     const report = {
       question:
         "Which dependency-free evidence backend should Sandwich use for its process-crash durability tier?",
+      protocol: {
+        version: 2,
+        durability: "process-crash-only",
+        prepare: "write, close, read back, and verify bytes plus receipt",
+        commit: "same-filesystem directory rename",
+        fsync: false,
+      },
       limitations: [
         "No machine-crash or power-loss durability claim.",
         "Measurements characterize only the reported Node build, libc, OS, architecture, and filesystem.",
@@ -497,11 +498,7 @@ async function main() {
         architecture: process.arch,
         node: process.version,
         sqlite: process.versions.sqlite,
-        libc: runtimeReport?.header?.glibcVersionRuntime
-          ? "glibc"
-          : process.platform === "linux"
-            ? "non-glibc-or-unknown"
-            : "n/a",
+        libc: libc(runtimeReport),
       },
       measurements: {
         files: await measureFiles(join(root, "measure-files")),
@@ -524,14 +521,17 @@ async function main() {
       },
     };
     const runtime = `node${process.versions.node.split(".")[0]}`;
-    const name = `${process.platform}-${process.arch}-${report.environment.libc}-${runtime}.json`;
+    const name = [process.platform, process.arch, report.environment.libc, runtime]
+      .map(filenamePart)
+      .join("-")
+      .concat(".json");
     const output = join(dirname(script), "results", name);
     await mkdir(dirname(output), { recursive: true });
     await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
     console.log(JSON.stringify(report, null, 2));
     console.log(`\nSaved ${output}`);
   } finally {
-    await rm(root, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
   }
 }
 

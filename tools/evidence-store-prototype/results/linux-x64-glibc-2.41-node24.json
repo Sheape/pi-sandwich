@@ -1,5 +1,12 @@
 {
   "question": "Which dependency-free evidence backend should Sandwich use for its process-crash durability tier?",
+  "protocol": {
+    "version": 2,
+    "durability": "process-crash-only",
+    "prepare": "write, close, read back, and verify bytes plus receipt",
+    "commit": "same-filesystem directory rename",
+    "fsync": false
+  },
   "limitations": [
     "No machine-crash or power-loss durability claim.",
     "Measurements characterize only the reported Node build, libc, OS, architecture, and filesystem."
@@ -9,35 +16,35 @@
     "architecture": "x64",
     "node": "v24.18.0",
     "sqlite": "3.53.1",
-    "libc": "glibc"
+    "libc": "glibc-2.41"
   },
   "measurements": {
     "files": {
       "records": 200,
-      "writeMs": 473.41689,
-      "readMs": 195.500409,
-      "idLookupMs": 0.892823,
-      "tailMs": 53.049255,
+      "writeMs": 307.732246,
+      "readMs": 95.581375,
+      "idLookupMs": 0.550409,
+      "tailMs": 29.852709,
       "found": true,
       "tailCount": 10,
       "diskBytes": 3321290
     },
     "indexedFiles": {
       "records": 200,
-      "writeMs": 1098.722518,
-      "readMs": 190.781312,
-      "idLookupMs": 0.551362,
-      "tailMs": 0.525245,
+      "writeMs": 793.161901,
+      "readMs": 248.049685,
+      "idLookupMs": 0.417375,
+      "tailMs": 0.687282,
       "found": true,
       "tailCount": 10,
       "diskBytes": 3338780
     },
     "gzipFiles": {
       "records": 200,
-      "writeMs": 781.880045,
-      "readMs": 139.43424,
-      "idLookupMs": 0.201181,
-      "tailMs": 37.411826,
+      "writeMs": 932.539767,
+      "readMs": 288.901497,
+      "idLookupMs": 0.224675,
+      "tailMs": 23.431082,
       "found": true,
       "tailCount": 10,
       "diskBytes": 75166
@@ -45,10 +52,10 @@
     "sqlite": {
       "available": true,
       "records": 200,
-      "writeMs": 48.135221,
-      "readMs": 21.638059,
-      "idLookupMs": 0.109287,
-      "tailMs": 2.051627,
+      "writeMs": 46.202944,
+      "readMs": 22.449623,
+      "idLookupMs": 0.103217,
+      "tailMs": 1.853011,
       "found": true,
       "tailCount": 10,
       "diskBytes": 3407872
@@ -58,17 +65,17 @@
         "originalBytes": 8388608,
         "raw": {
           "storedBytes": 8388608,
-          "writeMs": 129.822953
+          "writeMs": 102.934294
         },
         "gzip": {
           "storedBytes": 28565,
-          "writeMs": 172.924857,
+          "writeMs": 161.645918,
           "ratio": 0.0034052133560180664
         },
         "sqlite": {
           "available": true,
-          "writeMs": 47.508903,
-          "readMs": 100.605624,
+          "writeMs": 42.923977,
+          "readMs": 56.682482,
           "diskBytes": 8409088
         }
       },
@@ -76,17 +83,17 @@
         "originalBytes": 8388608,
         "raw": {
           "storedBytes": 8388608,
-          "writeMs": 148.066227
+          "writeMs": 119.101833
         },
         "gzip": {
           "storedBytes": 8391191,
-          "writeMs": 938.104854,
+          "writeMs": 612.00471,
           "ratio": 1.0003079175949097
         },
         "sqlite": {
           "available": true,
-          "writeMs": 69.895993,
-          "readMs": 66.28624,
+          "writeMs": 38.257839,
+          "readMs": 54.995516,
           "diskBytes": 8409088
         }
       }
@@ -95,7 +102,7 @@
   "recovery": {
     "stagedBeforeCleanup": 1,
     "committedAfterRestart": 1,
-    "cleanupMs": 6.261127,
+    "cleanupMs": 2.567913,
     "action": "remove abandoned staging; retain verified committed records"
   },
   "concurrency": {
