@@ -173,6 +173,12 @@ The immutable compact history metadata retains the complete expected receipt. Mo
 
 Pi does not expose a transaction spanning the evidence backend and history insertion. Commit-and-pin therefore precedes returning the replacement patch: a crash can leave committed but unreferenced evidence, but cannot leave referenced evidence uncommitted. Crash reconciliation must remove or adopt such records safely.
 
+### Chosen MVP durability tier
+
+Committed and pinned MVP evidence must survive a Sandwich or Pi process crash and subsequent restart. Process-lifetime-only storage is rejected because persisted compact history could outlive its recoverable original.
+
+Machine-crash survival is not claimed by the MVP unless [Choose the portable evidence-store backend](https://github.com/Sheape/pi-sandwich/issues/6) proves the required flush, atomic rename, directory synchronization, and recovery behavior on both Apple Silicon macOS and musl-based Void Linux. The implementation and documentation must state the proven tier without implying stronger durability.
+
 ## Independent presentation validation
 
 Both verified fidelity paths require an adapter-specific validator that checks the final model-visible projection against the frozen original. A schema proves structure, not truth.
@@ -297,11 +303,11 @@ The MVP is external-first:
 
 - **Decoder lifetime:** how retained `verified-lossless` history keeps compatible restorers available across upgrades, removal, restart, and package drift is tracked by [Guarantee decoder availability for retained lossless history](https://github.com/Sheape/pi-sandwich/issues/24).
 - **Canonical framing:** the exact versioned binary/text framing, block identities, and payload/envelope hash boundaries belong with [Define evidence references and recovery tools](https://github.com/Sheape/pi-sandwich/issues/7), informed by Pi's verified hook boundary.
-- **Durability tier and staged transaction mechanics:** process-, process-crash-, or machine-crash durability and cross-platform atomicity belong with [Choose the portable evidence-store backend](https://github.com/Sheape/pi-sandwich/issues/6).
+- **Staged transaction mechanics and stronger durability:** the MVP floor is process-crash survival; backend mechanics and any machine-crash claim belong with [Choose the portable evidence-store backend](https://github.com/Sheape/pi-sandwich/issues/6).
 - **Pin lifecycle:** session deletion, fork, compaction, pruning, export, and crash reconciliation belong with [Set evidence privacy, retention, and cleanup policy](https://github.com/Sheape/pi-sandwich/issues/8).
 - **Execution host and resource ceilings:** worker versus process boundary and concrete limits belong with [Choose adapter registration, ownership, and isolation semantics](https://github.com/Sheape/pi-sandwich/issues/9).
 - **Savings policy:** token estimates and minimum savings remain an efficiency decision in [Set compression profiles and explicit information budgets](https://github.com/Sheape/pi-sandwich/issues/12).
 
 ## Next unresolved question in this ticket
 
-What durability tier must the external-first MVP guarantee for committed and pinned evidence: process lifetime, process-crash survival, or machine-crash survival?
+How may a verified candidate change ordered content blocks while core preserves immutable envelope identity and makes every presentation reorder explicit and verifiable?

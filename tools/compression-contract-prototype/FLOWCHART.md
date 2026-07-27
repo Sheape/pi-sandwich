@@ -66,7 +66,7 @@ flowchart TD
 
     FC -- Yes --> CF{Candidate fidelity}
     CF -- verified-lossless --> CM[Commit versioned fidelity, canonical identity,<br/>owner, codec chain, metadata, and decoder requirements]
-    CF -- verified-externally-recoverable --> EP[Atomically COMMIT and PIN prepared evidence<br/>Bind complete receipt into immutable history metadata]
+    CF -- verified-externally-recoverable --> EP[Atomically COMMIT and PIN prepared evidence<br/>MVP tier survives process crash and restart<br/>Bind complete receipt into immutable history metadata]
     CM --> PATCH[Return exactly one replacement patch]
     EP --> PATCH
     PATCH --> IMM[Pi inserts compact result once<br/>History entry becomes immutable and opaque]
