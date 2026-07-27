@@ -60,7 +60,7 @@ flowchart TD
     E7 --> PV
     PV --> TRUTH{Typed claims, statuses, counts,<br/>excerpts, omissions, ordering permissions,<br/>and references are truthful?}
     TRUTH -- No or indeterminate --> FAIL
-    TRUTH -- Yes --> CORE[Core constructs replacement from frozen envelope<br/>Adapters cannot replace immutable identity or status]
+    TRUTH -- Yes --> CORE[Core constructs a new presentation sequence<br/>Every compact block has verified origin provenance<br/>Frozen envelope identities and original block order remain unchanged]
     CORE --> FC{Final contract passes<br/>and configured savings threshold met?}
     FC -- No --> FAIL
 

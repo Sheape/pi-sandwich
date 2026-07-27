@@ -201,7 +201,21 @@ const replacement = {
 };
 ```
 
-Adapters may reorder diagnostic presentation only when their typed contract explicitly permits it. Immutable envelope identities and content-block identity/order remain core-owned.
+### Chosen content-block ordering model
+
+The original ordered block sequence remains frozen in canonical origin metadata. A verified candidate does not mutate, reuse, or reorder those identities. Instead, core constructs a separate compression-owned presentation sequence.
+
+Every compact presentation block carries machine-checkable provenance:
+
+- Original block identity/index and exact byte or structural ranges for excerpts
+- Typed derivation metadata for independently recomputed fields
+- Explicit omission markers for removed blocks
+- Evidence references for externally recoverable omissions
+- Codec metadata for verified-lossless encoded blocks
+
+A typed adapter contract may intentionally reorder diagnostic presentation, and the presentation validator must verify that ordering permission and every provenance mapping. Omitted image or binary blocks require explicit disclosure and verified evidence unless restored through a verified lossless codec.
+
+Tool-call identity, tool name, role, success/error status, exposed provider identity, and the frozen original block identities/order remain core-owned and unchanged. “Immutable block order” therefore describes the canonical origin, not a requirement that compact presentation preserve the same display order.
 
 ## Immutable history and fidelity-specific recovery
 
@@ -308,6 +322,6 @@ The MVP is external-first:
 - **Execution host and resource ceilings:** worker versus process boundary and concrete limits belong with [Choose adapter registration, ownership, and isolation semantics](https://github.com/Sheape/pi-sandwich/issues/9).
 - **Savings policy:** token estimates and minimum savings remain an efficiency decision in [Set compression profiles and explicit information budgets](https://github.com/Sheape/pi-sandwich/issues/12).
 
-## Next unresolved question in this ticket
+## Remaining decisions
 
-How may a verified candidate change ordered content blocks while core preserves immutable envelope identity and makes every presentation reorder explicit and verifiable?
+No unresolved decision remains inside this safety-contract ticket. Exact canonical framing, backend mechanics, retention/pinning lifecycle, execution hosting, savings profiles, and decoder lifetime remain in their named follow-up tickets above.
