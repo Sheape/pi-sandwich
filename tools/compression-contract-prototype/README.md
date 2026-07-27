@@ -8,6 +8,8 @@ Does the compression pipeline state model agreed in [Set the immutable compressi
 
 This prototype models the decisions made so far. It deliberately does not choose a storage backend, implement real adapters, tune budgets, or integrate with Pi.
 
+See the [shared contract flowchart](./FLOWCHART.md) for the complete pipeline and recovery path.
+
 ## Run
 
 ```sh
