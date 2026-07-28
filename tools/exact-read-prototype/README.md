@@ -14,7 +14,9 @@ The prototype treats a **read observation** as the Pi-visible result returned by
 vp run prototype:exact-read
 ```
 
-Advance each scenario one check at a time with Space, or press `a` to resolve it immediately. The scenarios cover first reads, relative/absolute paths, symlinks, line ranges, truncation, same-stat content changes, formatting, generation, atomic replacement, deletion/recreation, checkout/reset, images, invalid UTF-8 decoding, unsupported byte-range producers, evidence failure, and edits racing after a completed read.
+Advance each scenario one check at a time with Space, or press `a` to resolve it immediately. The 23 scenarios cover first reads, relative/absolute paths, symlinks, line ranges, truncation, same-stat content changes, formatting, generation, atomic replacement, deletion/recreation, checkout/reset, images, invalid UTF-8 decoding, unsupported byte-range producers, parallel siblings, ledger eviction, evidence failure, and edits racing after a completed read.
+
+The accepted protocol and full adversarial matrix are recorded in [DECISION-RECORD.md](./DECISION-RECORD.md).
 
 ## Deliberate limits
 

@@ -35,6 +35,7 @@ export interface Scenario {
   event: string;
   note: string;
   prior?: ReadObservation;
+  baselineUnavailableReason?: "same-turn" | "evicted";
   current: ReadObservation;
 }
 
@@ -58,6 +59,8 @@ export interface Evaluation {
   outcome:
     | "pending"
     | "raw:first-observation"
+    | "raw:same-turn-baseline"
+    | "raw:evicted-baseline"
     | "raw:unsupported-producer"
     | "raw:read-error"
     | "raw:different-selection"
@@ -145,6 +148,12 @@ export function evaluate(scenario: Scenario, stage: Stage): Evaluation {
     return { ...pending, outcome: "raw:read-error", baselineEffect: "keep" };
   }
   if (!scenario.prior) {
+    if (scenario.baselineUnavailableReason === "same-turn") {
+      return { ...pending, outcome: "raw:same-turn-baseline", baselineEffect: "establish" };
+    }
+    if (scenario.baselineUnavailableReason === "evicted") {
+      return { ...pending, outcome: "raw:evicted-baseline", baselineEffect: "establish" };
+    }
     return { ...pending, outcome: "raw:first-observation", baselineEffect: "establish" };
   }
   if (!sameSelection) {
@@ -156,11 +165,12 @@ export function evaluate(scenario: Scenario, stage: Stage): Evaluation {
   if (scenario.current.evidenceCommit !== "ok") {
     return { ...pending, outcome: "raw:evidence-failure", baselineEffect: "replace" };
   }
+  const presentation = `[Sandwich: selected Pi-visible read result exactly matches latest successful observation ${scenario.prior.toolCallId}.]`;
   return {
     ...pending,
     outcome: "compact:unchanged",
     baselineEffect: "replace",
-    compactText: `[Sandwich: selected Pi-visible read result unchanged from ${scenario.prior.toolCallId}; exact current evidence ${evidenceRef(scenario.current)}]`,
+    compactText: `${presentation}\n[Sandwich: compact presentation ${Buffer.byteLength(presentation)} B; original ${currentPayload.bytes} B; exact evidence ${evidenceRef(scenario.current)}]`,
   };
 }
 
@@ -381,5 +391,19 @@ export const scenarios: Scenario[] = [
     current: read("bytes-191", { path: "blob.bin", offset: 1, limit: 8 }, text("12345678"), {
       producerContract: "custom-byte-read/v1",
     }),
+  },
+  {
+    name: "Parallel sibling read",
+    event: "An identical sibling read completed during the same assistant turn.",
+    note: "The turn-start baseline is frozen, so concurrent siblings cannot reference each other.",
+    baselineUnavailableReason: "same-turn",
+    current: read("read-201", { path: "src/a.ts" }, text("same bytes")),
+  },
+  {
+    name: "LRU baseline evicted",
+    event: "The matching selection was evicted under the observation-ledger memory bound.",
+    note: "Eviction loses one compression hit only; the fresh result establishes a new baseline.",
+    baselineUnavailableReason: "evicted",
+    current: read("read-211", { path: "src/a.ts" }, text("same bytes")),
   },
 ];
