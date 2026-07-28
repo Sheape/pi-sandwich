@@ -9,5 +9,11 @@ export default defineConfig({
   },
   run: {
     cache: true,
+    tasks: {
+      "prototype:exact-read": {
+        command: "node tools/exact-read-prototype/tui.ts",
+        cache: false,
+      },
+    },
   },
 });
