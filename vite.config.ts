@@ -14,6 +14,10 @@ export default defineConfig({
         command: "node tools/evidence-store-prototype/probe.ts",
         cache: false,
       },
+      "prototype:evidence-search": {
+        command: "node tools/evidence-search-prototype/tui.ts",
+        cache: false,
+      },
     },
   },
 });
